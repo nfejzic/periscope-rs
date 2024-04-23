@@ -55,6 +55,11 @@ impl FromStr for Witness {
     }
 }
 
+enum FlowType {
+    State,
+    Input,
+}
+
 impl Witness {
     fn analyze_and_report(&self) {
         for format in &self.formats {
@@ -111,8 +116,17 @@ impl Witness {
         (inputs, max_step)
     }
 
-    fn print_flow(inputs: &BTreeMap<String, Vec<(u64, Assignment)>>, max_step: u64) {
+    fn print_flow(
+        inputs: &BTreeMap<String, Vec<(u64, Assignment)>>,
+        max_step: u64,
+        flow_type: FlowType,
+    ) {
         let indent = " ".repeat(4);
+
+        let prefix = match flow_type {
+            FlowType::State => "#",
+            FlowType::Input => "@",
+        };
 
         for (name, flow) in inputs.iter() {
             println!("{indent}{}: ", name);
@@ -137,7 +151,8 @@ impl Witness {
                 }
 
                 println!(
-                    "@{:>w$}: {:>v_w$} ({})",
+                    "{}{:>w$}: {:>v_w$} ({})",
+                    prefix,
                     step,
                     assignment.get_value(),
                     assignment.kind.to_binary_string(),
@@ -146,7 +161,12 @@ impl Witness {
                 );
             }
 
-            println!("{indent}{indent}-> @{:>w$}: end\n", max_step, w = width);
+            println!(
+                "{indent}{indent}-> {}{:>w$}: end\n",
+                prefix,
+                max_step,
+                w = width
+            );
         }
     }
 
@@ -163,7 +183,7 @@ impl Witness {
 
         println!("Inputs flow:");
 
-        Self::print_flow(&inputs, max_step);
+        Self::print_flow(&inputs, max_step, FlowType::Input);
     }
 
     fn analyze_state_flow(&self) {
@@ -183,6 +203,6 @@ impl Witness {
         let (inputs, max_step) = Self::collect_assignments(frames_and_assignments);
 
         println!("States flow:");
-        Self::print_flow(&inputs, max_step);
+        Self::print_flow(&inputs, max_step, FlowType::State);
     }
 }
