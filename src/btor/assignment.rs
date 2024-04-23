@@ -37,23 +37,23 @@ impl AssignmentKind {
 
         let mut buf = String::with_capacity(bits + extra);
 
-        let write_bits = |buf: &mut String, value| {
-            (0..bits).rev().for_each(|i| {
+        let write_bits = |buf: &mut String, value, len: usize| {
+            (0..len).rev().for_each(|i| {
                 let bit = (value >> i) & 1;
                 write!(buf, "{}", bit).expect("Writing to string is infallible.");
             });
         };
 
         match self {
-            AssignmentKind::BitVec { value, .. } => write_bits(&mut buf, value),
+            AssignmentKind::BitVec { value, .. } => write_bits(&mut buf, value, bits),
             AssignmentKind::Array { value, index, .. } => {
                 buf.push('[');
-                write_bits(&mut buf, index);
+                write_bits(&mut buf, index, bits / 2);
                 buf.push(']');
 
                 buf.push_str(" -> ");
 
-                write_bits(&mut buf, value);
+                write_bits(&mut buf, value, bits / 2);
             }
         };
 
@@ -148,7 +148,7 @@ fn array_assign(input: &str) -> nom::IResult<&str, AssignmentKind> {
         sequence::tuple((array_index, binary_string)),
         |(idx, value)| AssignmentKind::Array {
             index: idx.parse().expect("binary_string parses only 0s and 1s."),
-            value: value.parse().expect("binary_string parses only 0s and 1s."),
+            value: u64::from_str_radix(value, 2).expect("binary_string parses only 0s and 1s."),
             bits: value.len(),
         },
     )(input)
