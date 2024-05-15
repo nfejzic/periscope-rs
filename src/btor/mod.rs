@@ -1,31 +1,45 @@
 mod assignment;
+mod btor2;
 mod helpers;
 mod witness_format;
 
-use std::{collections::BTreeMap, io::Read, str::FromStr};
+use std::{
+    collections::{BTreeMap, HashMap},
+    fmt::Write,
+    io::Read,
+    str::FromStr,
+};
 
 use nom::{branch, combinator, multi};
 
 use self::{
     assignment::Assignment,
+    btor2::Property,
     witness_format::{WitnessFormat, WitnessFrame},
 };
 
-pub fn interpret_btor_witness<I: Read>(mut input: I) -> Result<(), String> {
+pub use witness_format::{Prop, PropKind, PropVec};
+
+pub fn parse_btor_witness<I: Read>(
+    mut input: I,
+    btor2: Option<impl Read>,
+) -> anyhow::Result<Witness> {
     let mut buf = String::new();
     let _ = input.read_to_string(&mut buf);
 
-    let witness =
-        Witness::from_str(&buf).map_err(|err| format!("Failed to parse witness. Cause: {err}"))?;
+    let mut witness = Witness::from_str(&buf)
+        .map_err(|err| anyhow::format_err!("Failed to parse witness. Cause: {err}"))?;
 
-    witness.analyze_and_report();
+    if let Some(btor2_prop_names) = btor2.map(|inner| btor2::get_property_names(inner)) {
+        witness.add_prop_names(btor2_prop_names);
+    }
 
-    Ok(())
+    Ok(witness)
 }
 
 #[derive(Debug, Clone)]
-struct Witness {
-    formats: Vec<WitnessFormat>,
+pub struct Witness {
+    pub formats: Vec<WitnessFormat>,
 }
 
 impl FromStr for Witness {
@@ -61,21 +75,41 @@ enum FlowType {
 }
 
 impl Witness {
-    fn analyze_and_report(&self) {
+    pub fn props_in_steps(&self) -> Vec<(PropVec, usize)> {
+        let mut res = Vec::with_capacity(self.formats.len());
+
         for format in &self.formats {
-            let props = format
-                .header
-                .props
+            let props = format.header.props.clone();
+            res.push((PropVec { inner: props }, format.frames.len()));
+        }
+
+        res
+    }
+
+    pub fn analyze_and_report(&self) {
+        for (props, steps) in self.props_in_steps() {
+            let props = props
+                .inner
                 .iter()
-                .map(|prop| prop.to_string())
+                .map(|prop| {
+                    let mut prop_string = prop.to_string();
+
+                    if matches!(&prop.property, Some(property) if property.name.is_some()) {
+                        let property = prop.property.as_ref().unwrap();
+                        let _ = write!(
+                            &mut prop_string,
+                            " named '{}' with nid: {}",
+                            property.name.as_ref().unwrap(),
+                            property.node
+                        );
+                    }
+
+                    prop_string
+                })
                 .collect::<Vec<_>>()
                 .join(", ");
 
-            println!(
-                "Satisifed properties in {} steps:\n    {}\n",
-                format.frames.len(),
-                props,
-            );
+            println!("Satisifed properties in {} steps:\n    {}\n", steps, props,);
         }
 
         self.analyze_input_flow();
@@ -204,5 +238,15 @@ impl Witness {
 
         println!("States flow:");
         Self::print_flow(&inputs, max_step, FlowType::State);
+    }
+
+    fn add_prop_names(&mut self, mut btor2_prop_names: HashMap<u64, Property>) {
+        for format in &mut self.formats {
+            for prop in format.header.props.iter_mut() {
+                if let Some(property) = btor2_prop_names.remove(&prop.idx) {
+                    prop.property = Some(property);
+                }
+            }
+        }
     }
 }

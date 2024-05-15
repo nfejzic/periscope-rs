@@ -1,17 +1,63 @@
+use std::{fmt::Write, str::FromStr};
+
 use nom::{branch, bytes::complete, character, combinator, multi, sequence};
+use serde::{Deserialize, Serialize};
 
-use super::{assignment::Assignment, helpers};
+use super::{assignment::Assignment, btor2::Property, helpers};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PropKind {
     Bad,
     Justice,
 }
 
-#[derive(Debug, Clone)]
+impl FromStr for PropKind {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "bad" => Ok(Self::Bad),
+            "justice" => Ok(Self::Justice),
+            _ => Err(format!("Unknown prop kind: '{s}'")),
+        }
+    }
+}
+
+#[repr(transparent)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PropVec {
+    pub inner: Vec<Prop>,
+}
+
+impl PropVec {
+    pub fn formatted_string(&self) -> String {
+        self.inner
+            .iter()
+            .map(|prop| {
+                let mut prop_string = prop.to_string();
+
+                if matches!(&prop.property, Some(property) if property.name.is_some()) {
+                    let property = prop.property.as_ref().unwrap();
+                    let _ = write!(
+                        &mut prop_string,
+                        " named '{}' with nid: {}",
+                        property.name.as_ref().unwrap(),
+                        property.node
+                    );
+                }
+
+                prop_string
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Prop {
     pub kind: PropKind,
     pub idx: u64,
+    pub property: Option<Property>,
 }
 
 impl std::fmt::Display for Prop {
@@ -39,7 +85,11 @@ impl Prop {
                     "j" => PropKind::Justice,
                     _ => unreachable!("Parser recognizes only 'j' and 'b' as prop kinds."),
                 };
-                Prop { kind, idx }
+                Prop {
+                    kind,
+                    idx,
+                    property: None,
+                }
             },
         )(input)
     }
