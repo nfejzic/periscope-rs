@@ -1,0 +1,26 @@
+timeout: 300
+files:
+  - "division-by-zero-3-35-rotorized.btor2"
+  - "invalid-memory-access-fail-2-35-rotorized.btor2"
+  - "memory-access-fail-1-35-rotorized.btor2"
+  - "nested-if-else-1-35-rotorized.btor2"
+  - "nested-if-else-reverse-1-35-rotorized.btor2"
+  - "nested-recursion-fail-1-35-rotorized.btor2"
+  - "recursive-ackermann-1-35-rotorized.btor2"
+  - "recursive-factorial-fail-1-35-rotorized.btor2"
+  - "recursive-fibonacci-1-10-rotorized.btor2"
+  - "return-from-loop-1-35-rotorized.btor2"
+  - "simple-assignment-1-35-rotorized.btor2"
+  - "simple-decreasing-loop-1-35-rotorized.btor2"
+  - "simple-if-else-1-35-rotorized.btor2"
+  - "simple-if-else-reverse-1-35-rotorized.btor2"
+  - "simple-if-without-else-1-35-rotorized.btor2"
+  - "simple-increasing-loop-1-35-rotorized.btor2"
+  - "three-level-nested-loop-fail-1-35-rotorized.btor2"
+  - "two-level-nested-loop-1-35-rotorized.btor2"
+
+runs:
+  8-bit-codeword-size: "0 -codewordsize 8"
+  # 16-bit-codeword-size: "0 -codewordsize 16" # DONE
+  32-bit-codeword-size: "0 -codewordsize 32"
+  64-bit-codeword-size: "0 -codewordsize 64"
