@@ -21,6 +21,6 @@ files:
 
 runs:
   8-bit-codeword-size: "0 -codewordsize 8"
-  # 16-bit-codeword-size: "0 -codewordsize 16" # DONE
+  16-bit-codeword-size: "0 -codewordsize 16"
   32-bit-codeword-size: "0 -codewordsize 32"
   64-bit-codeword-size: "0 -codewordsize 64"
