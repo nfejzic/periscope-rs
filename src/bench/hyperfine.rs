@@ -53,7 +53,7 @@ pub fn run(
             hyperfine_output
                 .as_ref()
                 .to_str()
-                .context("Invalid output from 'btormc'")?,
+                .context("Invalid path for output from 'btormc'")?,
         ])
         .arg(&btormc_cmd)
         .spawn()?

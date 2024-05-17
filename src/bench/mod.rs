@@ -71,7 +71,7 @@ pub fn run_benches(path: PathBuf, bench_config: BenchConfig) -> anyhow::Result<(
     let mut stdout = std::io::stdout().lock();
 
     if bench_config.runs.is_empty() {
-        bench_file_or_dir(path, &dot_periscope, &bench_config, &mut stdout)
+        bench_file_or_dir(path, &dot_periscope, bench_config, &mut stdout)
     } else {
         run_benches_with_rotor(path, bench_config, &dot_periscope)
     }
@@ -80,11 +80,11 @@ pub fn run_benches(path: PathBuf, bench_config: BenchConfig) -> anyhow::Result<(
 fn bench_file_or_dir(
     path: PathBuf,
     dot_periscope: &Path,
-    bench_config: &BenchConfig,
+    bench_config: BenchConfig,
     stdout: &mut StdoutLock,
 ) -> anyhow::Result<()> {
     let (mut results, results_path) =
-        load_or_create_results(dot_periscope, bench_config.results_path.clone());
+        load_or_create_results(dot_periscope, bench_config.results_path);
 
     let mut paths: Vec<PathBuf> = Vec::new();
 
