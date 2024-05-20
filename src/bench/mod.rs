@@ -32,6 +32,8 @@ mod wc;
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct BenchConfig {
     pub timeout: Option<u128>,
+    #[serde(rename = "btormc-flags")]
+    pub btormc_flags: Option<String>,
     pub files: Vec<String>,
     pub runs: HashMap<String, String>,
 
@@ -66,14 +68,18 @@ enum BenchResult {
 
 /// Collects all `*.btor2` files in the given path and runs the `btormc` on them, benchmarking the
 /// runs.
-pub fn run_benches(path: PathBuf, bench_config: BenchConfig) -> anyhow::Result<()> {
+pub fn run_benches(
+    path: PathBuf,
+    bench_config: BenchConfig,
+    make_target: Option<String>,
+) -> anyhow::Result<()> {
     let dot_periscope = create_dot_periscope();
     let mut stdout = std::io::stdout().lock();
 
     if bench_config.runs.is_empty() {
         bench_file_or_dir(path, &dot_periscope, bench_config, &mut stdout)
     } else {
-        run_benches_with_rotor(path, bench_config, &dot_periscope)
+        run_benches_with_rotor(path, bench_config, &dot_periscope, make_target)
     }
 }
 
@@ -99,7 +105,13 @@ fn bench_file_or_dir(
     }
 
     for path in paths {
-        let bench_result = self::bench_file(&path, dot_periscope, stdout, bench_config.timeout)?;
+        let bench_result = self::bench_file(
+            &path,
+            dot_periscope,
+            stdout,
+            bench_config.timeout,
+            &bench_config.btormc_flags,
+        )?;
 
         let filename = path
             .file_name()
@@ -121,6 +133,7 @@ fn run_benches_with_rotor(
     selfie_dir: PathBuf,
     config: BenchConfig,
     dot_periscope: &Path,
+    make_target: Option<String>,
 ) -> anyhow::Result<()> {
     let mut stdout = std::io::stdout().lock();
 
@@ -128,7 +141,7 @@ fn run_benches_with_rotor(
         println!("\nRunning '{name}':");
 
         // run rotor with the given config
-        rotor::run_rotor(&selfie_dir, &rotor_args)?;
+        rotor::run_rotor(&selfie_dir, &rotor_args, &make_target)?;
 
         // collect filtered files
         let files: Vec<PathBuf> = std::fs::read_dir(selfie_dir.join("examples").join("symbolic"))?
@@ -159,8 +172,14 @@ fn run_benches_with_rotor(
         let (mut results, results_path) = load_or_create_results(dot_periscope, Some(results_path));
 
         for file in files {
-            let bench_result = bench_file(&file, dot_periscope, &mut stdout, config.timeout)
-                .with_context(|| format!("Failed benching file {}", file.display()))?;
+            let bench_result = bench_file(
+                &file,
+                dot_periscope,
+                &mut stdout,
+                config.timeout,
+                &config.btormc_flags,
+            )
+            .with_context(|| format!("Failed benching file {}", file.display()))?;
 
             let filename = file
                 .file_name()
@@ -217,6 +236,7 @@ fn bench_file(
     dot_periscope: &Path,
     stdout: &mut std::io::StdoutLock,
     timeout: Option<u128>,
+    btormc_flags: &Option<String>,
 ) -> anyhow::Result<BenchResult> {
     let path = path.as_ref();
     let wc_raw = wc::char_count_in_file(path)?;
@@ -228,7 +248,13 @@ fn bench_file(
 
     let hyperfine_out_path = dot_periscope.join(format!("{file_name}_hyperfine_output"));
     let hyperfine_json_path = dot_periscope.join(format!("{file_name}_hyperfine.json"));
-    let hyperfine = hyperfine::run(path, &hyperfine_out_path, hyperfine_json_path, timeout)?;
+    let hyperfine = hyperfine::run(
+        path,
+        &hyperfine_out_path,
+        hyperfine_json_path,
+        btormc_flags,
+        timeout,
+    )?;
 
     let mut props_in_steps = {
         if let Ok(witness) =

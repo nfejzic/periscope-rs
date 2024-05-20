@@ -37,6 +37,7 @@ fn main() -> anyhow::Result<()> {
             filter_files,
             bench_config,
             selfie_dir,
+            make_target,
         } => {
             let path = if run_rotor {
                 selfie_dir.context("Selfie directory is required when running rotor.")?
@@ -48,7 +49,7 @@ fn main() -> anyhow::Result<()> {
 
             let config = prepare_bench_config(run_rotor, filter_files, bench_config, results_path)?;
 
-            bench::run_benches(path, config)?;
+            bench::run_benches(path, config, make_target)?;
         }
     };
 

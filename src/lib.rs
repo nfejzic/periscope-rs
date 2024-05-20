@@ -80,5 +80,9 @@ pub enum Commands {
         /// benchmark.
         #[arg(required_unless_present("run_rotor"))]
         path: Option<PathBuf>,
+
+        /// Target for runing `make` inside of the selfie directory.
+        #[arg(short = 'm', long = "make-target", required_if_eq("run_rotor", "true"))]
+        make_target: Option<String>,
     },
 }

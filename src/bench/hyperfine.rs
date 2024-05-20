@@ -26,6 +26,7 @@ pub fn run(
     path: impl AsRef<Path>,
     hyperfine_output: impl AsRef<Path>,
     hyperfine_json_path: impl AsRef<Path>,
+    btormc_flags: &Option<String>,
     timeout: Option<u128>,
 ) -> anyhow::Result<Hyperfine> {
     let json_path = hyperfine_json_path.as_ref();
@@ -36,7 +37,8 @@ pub fn run(
         .read(true)
         .open(json_path)?;
 
-    let mut btormc_cmd = format!("btormc {} -kmax 200", path.as_ref().display());
+    let btormc_flags = btormc_flags.as_deref().unwrap_or("-kmax 200");
+    let mut btormc_cmd = format!("btormc {} {}", path.as_ref().display(), btormc_flags);
 
     if let Some(timeout) = timeout {
         btormc_cmd = format!("timeout --foreground {}s {}", timeout, btormc_cmd);
